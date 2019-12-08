@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+		<title>CG House</title>
+		<style>
+				#blocker {
+					position: absolute;
+					width: 100%;
+					height: 100%;
+					background-color: rgba(0,0,0,0.5);
+				}
+				#instructions {
+					width: 100%;
+					height: 100%;
+					display: -webkit-box;
+					display: -moz-box;
+					display: box;
+					-webkit-box-orient: horizontal;
+					-moz-box-orient: horizontal;
+					box-orient: horizontal;
+					-webkit-box-pack: center;
+					-moz-box-pack: center;
+					box-pack: center;
+					-webkit-box-align: center;
+					-moz-box-align: center;
+					box-align: center;
+					color: #ffffff;
+					text-align: center;
+					font-family: Arial;
+					font-size: 14px;
+					line-height: 24px;
+					cursor: pointer;
+				}
+			</style>
+	</head>
+	<body>
+
+		<div id="blocker">
+				<div id="instructions">
+					<span style="font-size:36px">Click to play</span>
+					<br /><br />
+					Move: WASD<br/>
+					Jump: SPACE<br/>
+					Look: MOUSE
+				</div>
+		</div>
+
+		<script type="module">
+
+			import * as THREE from '../build/three.module.js';
+			
+			import { DDSLoader } from './jsm/loaders/DDSLoader.js';
+			import { MTLLoader } from './jsm/loaders/MTLLoader.js';
+			import { OBJLoader } from './jsm/loaders/OBJLoader.js';
+			import { TGALoader } from './jsm/loaders/TGALoader.js';
+			import { ShadowMapViewer } from './jsm/utils/ShadowMapViewer.js';
+			import Stats from './jsm/libs/stats.module.js';
+			import { GUI } from './jsm/libs/dat.gui.module.js';
+			import { PointerLockControls } from './jsm/controls/PointerLockControls.js';
+
+			var camera, scene, renderer, controls,manager;
+			var objects = [];
+			var raycaster;
+			var moveForward = false;
+			var moveBackward = false;
+			var moveLeft = false;
+			var moveRight = false;
+			var canJump = false;
+			var prevTime = performance.now();
+			var velocity = new THREE.Vector3();
+			var direction = new THREE.Vector3();
+			var vertex = new THREE.Vector3();
+			var color = new THREE.Color();
+			var CFB1, CFB2;
+			var sphere = new THREE.SphereBufferGeometry( 2, 16, 8 );
+			var animatedFanRoom1, animatedFanRoom2, animatedFanRoom3, animatedHouse, animatedFurniture;
+
+
+			var sunlight, hemispherelight, bedroom1light, bedroom2light, livingroomlight1, livingroomlight2;
+
+			function init(){
+				
+				//Scene Buildign Declarations
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0xffffff );
+				//scene.fog = new THREE.Fog( 0xffffff, 0, 750 );
+
+				//Rendering Window Declaration
+				renderer = new THREE.WebGLRenderer({antialias:true});
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				document.body.appendChild(renderer.domElement);
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+				//Light Building Declarations
+
+				/*///////////////////////
+				*	Bedroom 1 Lights	*
+				*		- Floor Lamp	*
+				*		- Ceiling Light *
+				*////////////////////////
+				//Create a PointLightfor bedroom 1 Floor Lamp
+				bedroom1light = new THREE.PointLight( 0xffffff, 0.65, 350, 2 );
+				bedroom1light.position.set( 374.5, 184, 29.5 );
+				bedroom1light.castShadow = true;          
+				bedroom1light.shadow.mapSize.width = 512; 
+				bedroom1light.shadow.mapSize.height = 512;
+				bedroom1light.shadow.camera.near = 0.5;   
+				bedroom1light.shadow.camera.far = 500;     
+				bedroom1light.add( new THREE.Mesh( new THREE.SphereBufferGeometry( 3, 32, 32 ), new THREE.MeshBasicMaterial( { color: 0xffffff } ) ) );
+				bedroom1light.castShadow = true;
+				bedroom1light.receiveShadow = false;
+				scene.add( bedroom1light );
+
+				//Create a PointLight for bedroom 1 Ceiling Lamp
+				var bedroom1ceilinglight = new THREE.PointLight( 0xffffff, 1.5, 500, 2 );
+				bedroom1ceilinglight.position.set( 201.5, 238, 194 );
+				bedroom1ceilinglight.castShadow = true;          
+				bedroom1ceilinglight.shadow.mapSize.width = 512; 
+				bedroom1ceilinglight.shadow.mapSize.height = 512;
+				bedroom1ceilinglight.shadow.camera.near = 0.5;   
+				bedroom1ceilinglight.shadow.camera.far = 500;     
+				bedroom1ceilinglight.add( new THREE.Mesh( new THREE.BoxBufferGeometry( 35, -1, 35 ), new THREE.MeshPhongMaterial( { color: 0xffffff, side: THREE.BackSide } ) ) );
+				bedroom1ceilinglight.castShadow = true;
+				bedroom1ceilinglight.receiveShadow = false;
+				scene.add( bedroom1ceilinglight );
+				
+				/*///////////////////////
+				*	Bedroom 2 Lights	*
+				*		- Floor Lamp	*
+				*		- Ceiling Light	*
+				*////////////////////////
+				//Create a PointLight for bedroom 2 Floor Lamp
+				bedroom2light = new THREE.PointLight( 0xffffff, 0.65, 350, 2 );
+				bedroom2light.position.set( 29, 182, 779.5 );
+				bedroom2light.castShadow = true;          
+				bedroom2light.shadow.mapSize.width = 512; 
+				bedroom2light.shadow.mapSize.height = 512;
+				bedroom2light.shadow.camera.near = 0.5;   
+				bedroom2light.shadow.camera.far = 500;     
+				bedroom2light.add( new THREE.Mesh( new THREE.SphereBufferGeometry( 3, 32, 32 ), new THREE.MeshBasicMaterial( { color: 0xffffff } ) ) );
+				bedroom2light.castShadow = true;
+				bedroom2light.receiveShadow = false;
+				scene.add( bedroom2light );	
+
+				//Create a PointLight for bedroom 2 Ceiling Lamp
+				var bedroom2ceilinglight = new THREE.PointLight( 0xffffff, 1.5, 500, 2 );
+				bedroom2ceilinglight.position.set( 297, 238, 500.5 );
+				bedroom2ceilinglight.castShadow = true;          
+				bedroom2ceilinglight.shadow.mapSize.width = 512; 
+				bedroom2ceilinglight.shadow.mapSize.height = 512;
+				bedroom2ceilinglight.shadow.camera.near = 0.5;   
+				bedroom2ceilinglight.shadow.camera.far = 500;     
+				bedroom2ceilinglight.add( new THREE.Mesh( new THREE.BoxBufferGeometry( 35, -1, 35 ), new THREE.MeshPhongMaterial( { color: 0xffffff, side: THREE.BackSide } ) ) );
+				bedroom2ceilinglight.castShadow = true;
+				bedroom2ceilinglight.receiveShadow = false;
+				scene.add( bedroom2ceilinglight );
+
+
+				/*///////////////////////////
+				*	Living Room Lights		*
+				*		- Ceiling Lamp x2	*
+				*		- Floor Lamp x2 	*
+				*////////////////////////////
+				//Create a PointLight for Living Room Ceiling Lamp 1 - Hallway
+				var lvroomceilinglight1 = new THREE.PointLight( 0xffffff, 1.5, 500, 2 );
+				lvroomceilinglight1.position.set( 498.5, 238, 291 );
+				lvroomceilinglight1.castShadow = true;          
+				lvroomceilinglight1.shadow.mapSize.width = 512; 
+				lvroomceilinglight1.shadow.mapSize.height = 512;
+				lvroomceilinglight1.shadow.camera.near = 0.5;   
+				lvroomceilinglight1.shadow.camera.far = 500;     
+				lvroomceilinglight1.add( new THREE.Mesh( new THREE.BoxBufferGeometry( 35, -1, 35 ), new THREE.MeshPhongMaterial( { color: 0xffffff, side: THREE.BackSide } ) ) );
+				lvroomceilinglight1.castShadow = true;
+				lvroomceilinglight1.receiveShadow = false;
+				scene.add( lvroomceilinglight1 );
+
+				//Create a PointLight for living Room Ceiling Lamp 2 - Sofa
+				var lvroomceilinglight2 = new THREE.PointLight( 0xffffff, 1.5, 500, 2 );
+				lvroomceilinglight2.position.set( 802, 238, 566.5 );
+				lvroomceilinglight2.castShadow = true;          
+				lvroomceilinglight2.shadow.mapSize.width = 512; 
+				lvroomceilinglight2.shadow.mapSize.height = 512;
+				lvroomceilinglight2.shadow.camera.near = 0.5;   
+				lvroomceilinglight2.shadow.camera.far = 500;     
+				lvroomceilinglight2.add( new THREE.Mesh( new THREE.BoxBufferGeometry( 35, -1, 35 ), new THREE.MeshPhongMaterial( { color: 0xffffff, side: THREE.BackSide } ) ) );
+				lvroomceilinglight2.castShadow = true;
+				lvroomceilinglight2.receiveShadow = false;
+				scene.add( lvroomceilinglight2 );
+
+				//Create a PointLight for living room Floor Lamp 1
+				var lvroomlight1 = new THREE.PointLight( 0xffffff, 0.65, 350, 2 );
+				lvroomlight1.position.set( 608.2, 182, 782.5 );
+				lvroomlight1.castShadow = true;          
+				lvroomlight1.shadow.mapSize.width = 512; 
+				lvroomlight1.shadow.mapSize.height = 512;
+				lvroomlight1.shadow.camera.near = 0.5;   
+				lvroomlight1.shadow.camera.far = 500;     
+				lvroomlight1.add( new THREE.Mesh( new THREE.SphereBufferGeometry( 3, 32, 32 ), new THREE.MeshBasicMaterial( { color: 0xffffff } ) ) );
+				lvroomlight1.castShadow = true;
+				lvroomlight1.receiveShadow = false;
+				scene.add( lvroomlight1 );
+
+				//Create a PointLight for living room Floor Lamp 2
+				var lvroomlight2 = new THREE.PointLight( 0xffffff, 0.7, 350, 2 );
+				lvroomlight2.position.set( 967.5, 182, 783.5 );
+				lvroomlight2.castShadow = true;          
+				lvroomlight2.shadow.mapSize.width = 512; 
+				lvroomlight2.shadow.mapSize.height = 512;
+				lvroomlight2.shadow.camera.near = 0.5;   
+				lvroomlight2.shadow.camera.far = 500;     
+				lvroomlight2.add( new THREE.Mesh( new THREE.SphereBufferGeometry( 3, 32, 32 ), new THREE.MeshBasicMaterial( { color: 0xffffff } ) ) );
+				lvroomlight2.castShadow = true;
+				lvroomlight2.receiveShadow = false;
+				scene.add( lvroomlight2 );
+
+
+
+				//Hemisphere Light for Ambient Light			
+				hemispherelight = new THREE.HemisphereLight( 0xffffff, 0x777788, 0.5);
+				scene.add( hemispherelight );
+
+				//Camera Building Declarations
+				camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 8000);
+				camera.position.set(500, 165, 400);
+				//camera.rotate.z += 90;
+				
+				//House Walls Loading Declarations
+				manager = new THREE.LoadingManager();
+				manager.addHandler( /\.dds$/i, new DDSLoader() );
+							new MTLLoader( manager )
+								.setPath( 'obj/house2walls/' )
+								.load( 'house2walls.mtl', function ( materials ) {
+									materials.preload();
+									new OBJLoader( manager )
+										.setMaterials( materials )
+										.setPath( 'obj/house2walls/' )
+										.load( 'house2walls.obj', function ( object ) {
+											object.traverse( function ( child ) {
+  											      if ( child instanceof THREE.Mesh ) {
+  										          child.castShadow = true;
+  										          child.receiveShadow = true; 
+  										      }   
+  										  } );
+											animatedHouse = object;
+											scene.add( object );
+										}, );
+								} );
+
+				//House Furniture Loading Declarations
+				manager = new THREE.LoadingManager();
+				manager.addHandler( /\.dds$/i, new DDSLoader() );
+							new MTLLoader( manager )
+								.setPath( 'obj/house2furniture/' )
+								.load( 'house2furniture.mtl', function ( materials ) {
+									materials.preload();
+									new OBJLoader( manager )
+										.setMaterials( materials )
+										.setPath( 'obj/house2furniture/' )
+										.load( 'house2furniture.obj', function ( object ) {
+											object.traverse( function ( child ) {
+  											      if ( child instanceof THREE.Mesh ) {
+  										          child.castShadow = true;
+  										          child.receiveShadow = true; 
+  										      }   
+  										  } ); 
+											animatedFurniture = object;
+											scene.add( object );
+										}, );
+								} );
+				
+				//House Lights Loading Declarations
+				manager = new THREE.LoadingManager();
+				manager.addHandler( /\.dds$/i, new DDSLoader() );
+							new MTLLoader( manager )
+								.setPath( 'obj/house2lights/' )
+								.load( 'house2lights.mtl', function ( materials ) {
+									materials.preload();
+									new OBJLoader( manager )
+										.setMaterials( materials )
+										.setPath( 'obj/house2lights/' )
+										.load( 'house2lights.obj', function ( object ) {
+											object.traverse( function ( child ) {
+  											      if ( child instanceof THREE.Mesh ) {
+  										          child.castShadow = true;
+  										          child.receiveShadow = true; 
+  										      }   
+  										  } );
+											scene.add( object );
+										}, );
+								} );
+
+				///////////////////////////////////////////////////////
+				// Ceiling Fans Declaration With Animation Qualities //
+				//													 //
+				///////////////////////////////////////////////////////
+				
+				//House Ceiling Fan Bedroom 1 Loading Declarations
+				CFB1 = new THREE.LoadingManager();
+				CFB1.addHandler( /\.dds$/i, new DDSLoader() );
+							new MTLLoader( CFB1)
+								.setPath( 'obj/CFR1/' )
+								.load( 'CFR1.mtl', function ( materials ) {
+									materials.preload();
+									new OBJLoader( CFB1 )
+										.setMaterials( materials )
+										.setPath( 'obj/CFR1/' )
+										.load( 'CFR1.obj', function ( object ) {
+											object.traverse( function ( child ) {
+  											   	if ( child instanceof THREE.Mesh ) {
+  										       		child.castShadow = true;
+  										       		child.receiveShadow = true; 
+  										      	}   
+  											} );
+											object.rotateX(- 1.5708);
+											object.position.set(320,200,130)
+											animatedFanRoom1 = object;
+											scene.add( object );
+										}, );
+								} );				
+
+				//House Ceiling Fan Bedroom 2 Loading Declarations
+				CFB2 = new THREE.LoadingManager();
+				CFB2.addHandler( /\.dds$/i, new DDSLoader() );
+							new MTLLoader( CFB1)
+								.setPath( 'obj/CFR1/' )
+								.load( 'CFR1.mtl', function ( materials ) {
+									materials.preload();
+									new OBJLoader( CFB1 )
+										.setMaterials( materials )
+										.setPath( 'obj/CFR1/' )
+										.load( 'CFR1.obj', function ( object ) {
+											object.traverse( function ( child ) {
+  											   	if ( child instanceof THREE.Mesh ) {
+  										       		child.castShadow = true;
+  										       		child.receiveShadow = true; 
+  										      	}   
+  											} );
+											object.rotateX(- 1.5708);
+											object.position.set(240,200,630)
+											animatedFanRoom2 = object;
+											scene.add( object );
+										}, );
+								} );			
+
+				//House Ceiling Fan Bedroom 3 Loading Declarations
+				CFB2 = new THREE.LoadingManager();
+				CFB2.addHandler( /\.dds$/i, new DDSLoader() );
+							new MTLLoader( CFB1)
+								.setPath( 'obj/CFR1/' )
+								.load( 'CFR1.mtl', function ( materials ) {
+									materials.preload();
+									new OBJLoader( CFB1 )
+										.setMaterials( materials )
+										.setPath( 'obj/CFR1/' )
+										.load( 'CFR1.obj', function ( object ) {
+											object.traverse( function ( child ) {
+  											   	if ( child instanceof THREE.Mesh ) {
+  										       		child.castShadow = true;
+  										       		child.receiveShadow = true; 
+  										      	}   
+  											} );
+											object.rotateX(- 1.5708);
+											object.position.set(700,200,630)
+											animatedFanRoom3 = object;
+											scene.add( object );
+										}, );
+								} );
+
+				//House Door Bedroom 1 Loading Declarations
+				manager = new THREE.LoadingManager();
+				manager.addHandler( /\.dds$/i, new DDSLoader() );
+							new MTLLoader( manager )
+								.setPath( 'obj/house2bdoor1/' )
+								.load( 'house2bdoor1.mtl', function ( materials ) {
+									materials.preload();
+									new OBJLoader( manager )
+										.setMaterials( materials )
+										.setPath( 'obj/house2bdoor1/' )
+										.load( 'house2bdoor1.obj', function ( object ) {
+											object.traverse( function ( child ) {
+  											      if ( child instanceof THREE.Mesh ) {
+  										          child.castShadow = true;
+  										          child.receiveShadow = true; 
+  										      }   
+  										  } );
+											scene.add( object );
+										}, );
+								} );
+
+				//House Door Bedroom 2 Loading Declarations
+				manager = new THREE.LoadingManager();
+				manager.addHandler( /\.dds$/i, new DDSLoader() );
+							new MTLLoader( manager )
+								.setPath( 'obj/house2bdoor2/' )
+								.load( 'house2bdoor2.mtl', function ( materials ) {
+									materials.preload();
+									new OBJLoader( manager )
+										.setMaterials( materials )
+										.setPath( 'obj/house2bdoor2/' )
+										.load( 'house2bdoor2.obj', function ( object ) {
+											object.traverse( function ( child ) {
+  											      if ( child instanceof THREE.Mesh ) {
+  										          child.castShadow = true;
+  										          child.receiveShadow = true; 
+  										      }   
+  										  } );
+											scene.add( object );
+										}, );
+								} );
+
+
+				
+
+				//Key Input Declarations
+				controls = new PointerLockControls( camera, document.body );
+				var blocker = document.getElementById( 'blocker' );
+				var instructions = document.getElementById( 'instructions' );
+				instructions.addEventListener( 'click', function () {
+					controls.lock();
+				}, false );
+				controls.addEventListener( 'lock', function () {
+					instructions.style.display = 'none';
+					blocker.style.display = 'none';
+				} );
+				controls.addEventListener( 'unlock', function () {
+					blocker.style.display = 'block';
+					instructions.style.display = '';
+				} );
+				scene.add( controls.getObject() );
+				var onKeyDown = function ( event ) {
+					switch ( event.keyCode ) {
+						case 38: // up
+						case 87: // w
+							moveForward = true;
+							break;
+						case 37: // left
+						case 65: // a
+							moveLeft = true;
+							break;
+						case 40: // down
+						case 83: // s
+							moveBackward = true;
+							break;
+						case 39: // right
+						case 68: // d
+							moveRight = true;
+							break;
+						case 32: // space
+							if ( canJump === true ) velocity.y += 300;
+							canJump = false;
+							break;
+					}
+				};
+				var onKeyUp = function ( event ) {
+					switch ( event.keyCode ) {
+						case 38: // up
+						case 87: // w
+							moveForward = false;
+							break;
+						case 37: // left
+						case 65: // a
+							moveLeft = false;
+							break;
+						case 40: // down
+						case 83: // s
+							moveBackward = false;
+							break;
+						case 39: // right
+						case 68: // d
+							moveRight = false;
+							break;
+					}
+				};
+				document.addEventListener( 'keydown', onKeyDown, false );
+				document.addEventListener( 'keyup', onKeyUp, false );
+
+				//Raycaster
+				raycaster = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, - 1, 0 ), 0, 10 );
+				
+				//Skybox Builder
+				var loader = new TGALoader();
+
+				var materialArray = [];
+				var texture_ft = loader.load('skybox/ely_hills/hills_ft.tga');
+				var texture_bk = loader.load('skybox/ely_hills/hills_bk.tga');
+				var texture_up = loader.load('skybox/ely_hills/hills_dn.tga');
+				var texture_dn = loader.load('skybox/ely_hills/hills_up.tga');
+				var texture_rt = loader.load('skybox/ely_hills/hills_rt.tga');
+				var texture_lf = loader.load('skybox/ely_hills/hills_lf.tga');
+
+				materialArray.push(new THREE. MeshBasicMaterial({map: texture_ft, side: THREE.DoubleSide} ));
+				materialArray.push(new THREE. MeshBasicMaterial({map: texture_bk, side: THREE.DoubleSide} ));
+				materialArray.push(new THREE. MeshBasicMaterial({map: texture_up, side: THREE.DoubleSide} ));
+				materialArray.push(new THREE. MeshBasicMaterial({map: texture_dn, side: THREE.DoubleSide} ));
+				materialArray.push(new THREE. MeshBasicMaterial({map: texture_rt, side: THREE.DoubleSide} ));
+				materialArray.push(new THREE. MeshBasicMaterial({map: texture_lf, side: THREE.DoubleSide} ));
+				 
+				let skyboxGeo = new THREE.BoxGeometry(10000,10000,10000);
+				let skybox = new THREE.Mesh(skyboxGeo, materialArray);
+				skybox.position.y = + 50;
+				skybox.scale.y = - 1;
+				scene.add(skybox);
+				
+			}
+			
+			function animate() {
+				requestAnimationFrame(animate);
+				animatedFanRoom1.rotation.z += 0.05;
+				animatedFanRoom2.rotation.z += 0.07;
+				animatedFanRoom3.rotation.z += 0.095;
+				
+				/* // FUN TIME CODE BOIS
+				animatedHouse.rotation.x += 0.01;
+				animatedFurniture.rotation.x -= 0.01;
+				*/
+				if ( controls.isLocked === true ) {
+
+					raycaster.ray.origin.copy( controls.getObject().position );
+					raycaster.ray.origin.y -= 10;
+					
+					var intersections = raycaster.intersectObjects( objects );
+					
+					var onObject = intersections.length > 0;
+					
+					var time = performance.now();
+					var delta = ( time - prevTime ) / 1000;
+					
+					velocity.x -= velocity.x * 10.0 * delta;
+					velocity.z -= velocity.z * 10.0 * delta;
+					
+					velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
+					
+					direction.z = Number( moveForward ) - Number( moveBackward );
+					direction.x = Number( moveRight ) - Number( moveLeft );
+					direction.normalize(); // this ensures consistent movements in all directions
+					
+					if ( moveForward || moveBackward ) velocity.z -= direction.z * 1400.0 * delta;
+					if ( moveLeft || moveRight ) velocity.x -= direction.x * 1400.0 * delta;
+					
+					if ( onObject === true ) {
+						velocity.y = Math.max( 0, velocity.y );
+						canJump = true;
+					}
+
+					controls.moveRight( - velocity.x * delta );
+					controls.moveForward( - velocity.z * delta );
+					
+					controls.getObject().position.y += ( velocity.y * delta ); // new behavior
+					
+					if ( controls.getObject().position.y < 165 ) {
+						velocity.y = 0;//130 Height for Normal
+						controls.getObject().position.y = 165;
+						canJump = true;
+					}
+					
+					prevTime = time;
+				}
+
+				renderer.render(scene, camera);
+			}
+
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			init();
+			animate();
+		</script>		
+
+	</body>
+</html>
